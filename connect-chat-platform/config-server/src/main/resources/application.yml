@@ -1,0 +1,26 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          # Resolved relative to the JVM working directory. Run this module
+          # from the repo root (mvn -pl config-server spring-boot:run) or via
+          # deploy/docker/docker-compose.yml, which mounts config-repo/ at
+          # this path.
+          search-locations: "file:${CONFIG_REPO_PATH:${user.dir}/config-repo}"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh
+  endpoint:
+    health:
+      show-details: when-authorized

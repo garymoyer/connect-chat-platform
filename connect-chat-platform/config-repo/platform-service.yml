@@ -1,0 +1,65 @@
+# Base config for the platform-service client, layered on top of application.yml
+# by config-server. Profile-specific overrides live in
+# platform-service-<profile>.yml (e.g. platform-service-local.yml).
+
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+# --- Ingress gateway latency budget (per NFR sign-off) ---
+# P50 target: 10-30ms  |  P99 target: <100ms  |  Operational ceiling: 150ms
+# The 150ms ceiling is enforced as the circuit-breaker trip boundary below —
+# a call that would blow the ceiling is failed fast rather than allowed to
+# degrade the ingress gateway's own SLO.
+resilience4j:
+  timelimiter:
+    instances:
+      ingress-gateway:
+        timeoutDuration: 150ms
+  circuitbreaker:
+    instances:
+      ingress-gateway:
+        baseConfig: default
+        slowCallDurationThreshold: 100ms
+        slowCallRateThreshold: 50
+      legacy-soap-gateway:
+        baseConfig: default
+      legacy-mainframe-gateway:
+        baseConfig: default
+      legacy-rest-db-gateway:
+        baseConfig: default
+  retry:
+    instances:
+      legacy-soap-gateway:
+        baseConfig: default
+      legacy-mainframe-gateway:
+        baseConfig: default
+      legacy-rest-db-gateway:
+        baseConfig: default
+  bulkhead:
+    instances:
+      legacy-soap-gateway:
+        baseConfig: default
+      legacy-mainframe-gateway:
+        baseConfig: default
+      legacy-rest-db-gateway:
+        baseConfig: default
+
+connect-chat:
+  platform:
+    availability-target: "99.999"
+    latency-budget:
+      p50-ms: 30
+      p99-target-ms: 100
+      operational-ceiling-ms: 150
+    dr:
+      rpo-seconds: 0
+      rto-seconds: 0
+      # RPO/RTO = 0 is an extremely demanding target — see
+      # docs/adr/0002-rpo-rto-zero-implications.md for the architectural
+      # implications and open questions the Tech Lead needs to resolve
+      # (synchronous multi-AZ replication vs. the 100ms p99 budget).
